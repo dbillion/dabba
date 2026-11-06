@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#E8452C">
+<title>Dabba — Cloud Kitchen Delivery City</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --accent:#E8452C;--accent-light:#FF6B4A;--accent-dark:#C23A24;
+  --bg:#FDF8F4;--surface:rgba(255,255,255,0.82);--surface-solid:#FFFFFF;
+  --text:#2D1B14;--text-secondary:#7A5C50;--text-light:#A08878;
+  --border:rgba(200,170,150,0.25);--shadow:rgba(45,27,20,0.08);
+  --success:#2EAF65;--warning:#E8A832;--danger:#E8452C;--info:#3B82F6;
+  --kpi-bg:rgba(255,255,255,0.88);
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text)}
+#canvas-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0}
+canvas{display:block;touch-action:none}
+
+/* ── Top Bar ── */
+#topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--surface);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;z-index:100;gap:10px}
+#topbar .logo{font-weight:800;font-size:18px;color:var(--accent);letter-spacing:-0.5px}
+#topbar .logo span{color:var(--text)}
+#search-box{flex:1;max-width:280px;height:34px;border:1px solid var(--border);border-radius:8px;padding:0 10px 0 32px;font-size:13px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23A08878' viewBox='0 0 24 24'%3E%3Cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' stroke='%23A08878' stroke-width='2' fill='none'/%3E%3C/svg%3E") 10px center no-repeat;outline:none;color:var(--text)}
+#search-box:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,69,44,0.1)}
+#area-switcher{display:flex;gap:4px}
+#area-switcher button{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface-solid);font-size:12px;cursor:pointer;color:var(--text-secondary);font-weight:500;transition:all .2s}
+#area-switcher button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.top-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.top-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface-solid);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s;color:var(--text-secondary)}
+.top-btn:hover{border-color:var(--accent);color:var(--accent)}
+#weather-badge{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:rgba(46,175,101,0.12);color:var(--success);border:1px solid rgba(46,175,101,0.2)}
+#clock{font-size:13px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+#alert-count{position:relative}
+#alert-count .dot{position:absolute;top:3px;right:3px;width:7px;height:7px;background:var(--danger);border-radius:50%;border:1.5px solid var(--surface-solid)}
+
+/* ── KPI Row ── */
+#kpi-row{position:fixed;top:60px;left:16px;display:flex;gap:10px;z-index:90}
+.kpi-card{background:var(--kpi-bg);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:12px;padding:12px 18px;min-width:150px;box-shadow:0 2px 12px var(--shadow)}
+.kpi-card .label{font-size:11px;color:var(--text-light);font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
+.kpi-card .value{font-size:26px;font-weight:800;color:var(--text);margin:2px 0;line-height:1.1}
+.kpi-card .sub{font-size:11px;color:var(--success);font-weight:600}
+.kpi-card .sub.down{color:var(--danger)}
+
+/* ── Right Panel ── */
+#right-panel{position:fixed;top:60px;right:16px;width:300px;max-height:calc(100vh - 76px);overflow-y:auto;z-index:90;display:flex;flex-direction:column;gap:10px}
+.panel-card{background:var(--surface);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 2px 12px var(--shadow)}
+.panel-card h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.panel-card h3 .dot-indicator{width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block}
+
+/* ── Order Tracker ── */
+#order-tracker{position:fixed;bottom:16px;left:16px;z-index:90}
+.tracker-card{background:var(--surface);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:12px;padding:14px 18px;box-shadow:0 2px 12px var(--shadow);min-width:260px}
+.tracker-card h3{font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)}
+.tracker-steps{display:flex;flex-direction:column;gap:0}
+.tracker-step{display:flex;align-items:center;gap:10px;padding:6px 0;position:relative}
+.tracker-step .step-dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--border);background:var(--surface-solid);flex-shrink:0;z-index:1;transition:all .3s}
+.tracker-step.active .step-dot{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,69,44,0.2)}
+.tracker-step.done .step-dot{background:var(--success);border-color:var(--success)}
+.tracker-step .step-line{position:absolute;left:5px;top:24px;width:2px;height:18px;background:var(--border)}
+.tracker-step.done .step-line{background:var(--success)}
+.tracker-step:last-child .step-line{display:none}
+.tracker-step .step-label{font-size:12px;color:var(--text-secondary);font-weight:500}
+.tracker-step.active .step-label{color:var(--accent);font-weight:700}
+.tracker-step.done .step-label{color:var(--success)}
+
+/* ── Tables ── */
+.tab-bar{display:flex;gap:2px;margin-bottom:10px;background:var(--bg);border-radius:8px;padding:3px}
+.tab-bar button{flex:1;padding:6px 8px;border:none;background:transparent;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text-secondary);transition:all .2s}
+.tab-bar button.active{background:var(--surface-solid);color:var(--accent);box-shadow:0 1px 4px var(--shadow)}
+.data-table{width:100%;border-collapse:collapse;font-size:11px}
+.data-table th{text-align:left;padding:6px 8px;color:var(--text-light);font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.3px;font-size:10px}
+.data-table td{padding:6px 8px;border-bottom:1px solid rgba(200,170,150,0.1);color:var(--text)}
+.data-table tr:hover{background:rgba(232,69,44,0.04)}
+.badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.badge.online{background:rgba(46,175,101,0.12);color:var(--success)}
+.badge.busy{background:rgba(232,168,50,0.12);color:var(--warning)}
+.badge.offline{background:rgba(200,170,150,0.12);color:var(--text-light)}
+.badge.cooking{background:rgba(232,69,44,0.1);color:var(--accent)}
+.badge.delivering{background:rgba(59,130,246,0.1);color:var(--info)}
+
+/* ── Selection Info ── */
+#sel-panel{display:none}
+#sel-panel.show{display:block}
+#sel-panel .sel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#sel-panel .sel-close{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface-solid);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+.stat-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
+.stat-row .stat-label{color:var(--text-secondary)}
+.stat-row .stat-val{font-weight:700;color:var(--text)}
+
+/* ── Mobile ── */
+#mob-search-bar{display:none}
+#bottom-sheet{display:none}
+#mob-nav{display:none}
+
+@media(max-width:768px){
+  #topbar{height:46px;padding:0 10px}
+  #topbar .logo{font-size:15px}
+  #search-box,#area-switcher,#weather-badge,#clock{display:none}
+  #kpi-row{top:54px;left:8px;right:8px;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #kpi-row::-webkit-scrollbar{display:none}
+  .kpi-card{min-width:120px;padding:8px 12px}
+  .kpi-card .value{font-size:20px}
+  #right-panel,#order-tracker{display:none}
+
+  #mob-search-bar{display:flex;position:fixed;top:46px;left:0;right:0;height:42px;background:var(--surface);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 10px;align-items:center;gap:6px;z-index:99;overflow-x:auto}
+  #mob-search-bar input{height:30px;min-width:120px;flex-shrink:0;border:1px solid var(--border);border-radius:6px;padding:0 8px 0 28px;font-size:12px;background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23A08878' viewBox='0 0 24 24'%3E%3Cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' stroke='%23A08878' stroke-width='2' fill='none'/%3E%3C/svg%3E") 8px center no-repeat;outline:none;color:var(--text)}
+  .mob-area-pill{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface-solid);font-size:11px;cursor:pointer;white-space:nowrap;color:var(--text-secondary);font-weight:500;flex-shrink:0}
+  .mob-area-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  #bottom-sheet{display:flex;flex-direction:column;position:fixed;left:0;right:0;bottom:56px;height:55vh;background:var(--surface);backdrop-filter:blur(18px);border-top:1px solid var(--border);border-radius:16px 16px 0 0;z-index:95;transform:translateY(calc(100% - 48px));transition:transform .3s ease}
+  #bottom-sheet.open{transform:translateY(0)}
+  #sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:8px auto 4px}
+  #sheet-tabs{display:flex;height:36px;padding:0 8px;gap:2px;flex-shrink:0}
+  #sheet-tabs button{flex:1;border:none;background:transparent;font-size:11px;font-weight:600;color:var(--text-light);cursor:pointer;border-radius:6px;transition:all .2s}
+  #sheet-tabs button.active{color:var(--accent);background:rgba(232,69,44,0.08)}
+  #sheet-content{flex:1;overflow-y:auto;padding:8px 12px;-webkit-overflow-scrolling:touch}
+
+  #mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--surface);backdrop-filter:blur(18px);border-top:1px solid var(--border);z-index:100;padding:0}
+  #mob-nav button{flex:1;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;font-weight:600;color:var(--text-light);cursor:pointer;transition:color .2s}
+  #mob-nav button.active{color:var(--accent)}
+  #mob-nav button .nav-icon{font-size:18px}
+
+  #canvas-container{height:calc(100% - 104px) !important}
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── Loading ── */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
+#loading .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
+#loading p{margin-top:16px;font-size:14px;color:var(--text-secondary);font-weight:500}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><p>Building neighbourhood…</p></div>
+<div id="canvas-container"></div>
+
+<!-- Top Bar -->
+<div id="topbar">
+  <div class="logo">🍱 <span>Dabba</span></div>
+  <input id="search-box" type="text" placeholder="Search orders, riders…">
+  <div id="area-switcher">
+    <button class="active" onclick="window.flyToZone('all')">All Zones</button>
+    <button onclick="window.flyToZone('kitchen')">Kitchens</button>
+    <button onclick="window.flyToZone('residential')">Residential</button>
+    <button onclick="window.flyToZone('commercial')">Commercial</button>
+  </div>
+  <div class="top-right">
+    <span id="weather-badge">☀️ Summer</span>
+    <span id="clock">12:00</span>
+    <button class="top-btn" id="alert-count" title="Alerts">🔔<span class="dot"></span></button>
+    <button class="top-btn" onclick="window.toggleDayNight()" title="Day/Night">🌗</button>
+    <button class="top-btn" title="Settings">⚙️</button>
+  </div>
+</div>
+
+<!-- KPI Row -->
+<div id="kpi-row">
+  <div class="kpi-card">
+    <div class="label">Orders this hour</div>
+    <div class="value" id="kpi-orders">47</div>
+    <div class="sub">↑ 12% vs last hr</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Avg Delivery Time</div>
+    <div class="value" id="kpi-delivery">24<span style="font-size:14px;font-weight:600">min</span></div>
+    <div class="sub">↓ 2min faster</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Riders Online</div>
+    <div class="value" id="kpi-riders">18</div>
+    <div class="sub">3 idle</div>
+  </div>
+</div>
+
+<!-- Right Panel (desktop) -->
+<div id="right-panel">
+  <div class="panel-card" id="sel-panel">
+    <div class="sel-header">
+      <h3><span class="dot-indicator"></span> <span id="sel-title">Selected</span></h3>
+      <button class="sel-close" onclick="window.clearSelection()">✕</button>
+    </div>
+    <div id="sel-body"></div>
+  </div>
+  <div class="panel-card">
+    <h3>📋 Tables</h3>
+    <div class="tab-bar" id="desk-tab-bar">
+      <button class="active" onclick="window.showDeskTab('orders')">Orders</button>
+      <button onclick="window.showDeskTab('riders')">Riders</button>
+      <button onclick="window.showDeskTab('kitchens')">Kitchens</button>
+    </div>
+    <div id="desk-table-content">
+      <table class="data-table" id="orders-table">
+        <thead><tr><th>Order</th><th>Dish</th><th>₹</th><th>Status</th></tr></thead>
+        <tbody id="orders-tbody"></tbody>
+      </table>
+      <table class="data-table" id="riders-table" style="display:none">
+        <thead><tr><th>Rider</th><th>Orders</th><th>Dist</th><th>Status</th></tr></thead>
+        <tbody id="riders-tbody"></tbody>
+      </table>
+      <table class="data-table" id="kitchens-table" style="display:none">
+        <thead><tr><th>Kitchen</th><th>Queue</th><th>Avg Prep</th><th>Status</th></tr></thead>
+        <tbody id="kitchens-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Order Tracker (desktop) -->
+<div id="order-tracker">
+  <div class="tracker-card">
+    <h3>🛵 Order #D-1047</h3>
+    <div class="tracker-steps" id="tracker-steps">
+      <div class="tracker-step done"><div class="step-dot"></div><div class="step-line"></div><span class="step-label">Placed</span></div>
+      <div class="tracker-step done"><div class="step-dot"></div><div class="step-line"></div><span class="step-label">Accepted</span></div>
+      <div class="tracker-step active"><div class="step-dot"></div><div class="step-line"></div><span class="step-label">Cooking</span></div>
+      <div class="tracker-step"><div class="step-dot"></div><div class="step-line"></div><span class="step-label">Picked Up</span></div>
+      <div class="tracker-step"><div class="step-dot"></div><div class="step-line"></div><span class="step-label">On the Way</span></div>
+      <div class="tracker-step"><div class="step-dot"></div><span class="step-label">Delivered</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile: Search bar -->
+<div id="mob-search-bar">
+  <input type="text" placeholder="Search orders…">
+  <button class="mob-area-pill active" onclick="window.flyToZone('all')">All</button>
+  <button class="mob-area-pill" onclick="window.flyToZone('kitchen')">Kitchens</button>
+  <button class="mob-area-pill" onclick="window.flyToZone('residential')">Homes</button>
+  <button class="mob-area-pill" onclick="window.flyToZone('commercial')">Offices</button>
+</div>
+
+<!-- Mobile: Bottom Sheet -->
+<div id="bottom-sheet">
+  <div id="sheet-handle"></div>
+  <div id="sheet-tabs">
+    <button class="active" onclick="window.showSheetTab('tracker')">Track</button>
+    <button onclick="window.showSheetTab('orders')">Orders</button>
+    <button onclick="window.showSheetTab('riders')">Riders</button>
+    <button onclick="window.showSheetTab('kitchens')">Kitchens</button>
+    <button onclick="window.showSheetTab('info')">Info</button>
+  </div>
+  <div id="sheet-content"></div>
+</div>
+
+<!-- Mobile: Bottom Nav -->
+<div id="mob-nav">
+  <button class="active" onclick="window.mobNav('street')"><span class="nav-icon">🏘️</span>Street</button>
+  <button onclick="window.mobNav('kitchen')"><span class="nav-icon">🍳</span>Kitchen</button>
+  <button onclick="window.mobNav('riders')"><span class="nav-icon">🛵</span>Riders</button>
+  <button onclick="window.mobNav('park')"><span class="nav-icon">🌳</span>Park</button>
+  <button onclick="window.mobNav('data')"><span class="nav-icon">📊</span>Data</button>
+</div>
+
+<script src="js/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ── Data ── */
+const DISHES = ['Biryani','Dosa Set','Thali','Curd Rice','Parotta','Meals','Fried Rice','Noodles','Pongal','Idli Vada','Paneer Butter','Chicken 65'];
+const RIDER_NAMES = ['Karthik','Priya','Ravi','Meena','Suresh','Divya','Arun','Lakshmi','Vijay','Deepa','Ganesh','Anjali','Murugan','Kavitha','Senthil','Uma','Bala','Saranya'];
+const KITCHEN_NAMES = ['Spice Cloud','Chennai Bites','Desi Bowl'];
+const STREETS_X = [-30,-10,10,30];
+const STREETS_Z = [-30,-10,10,30];
+
+let scene, camera, renderer, controls, clock;
+let buildings=[], kitchens=[], riders=[], vehicles=[], orders=[];
+let streetLights=[], trafficLights=[];
+let selectedObj=null, followRider=null;
+let isNight=false, season='summer';
+let orderCounter=1047, ordersThisHour=47, ridersOnline=18;
+let domThrottle=0;
+const tmpV=new THREE.Vector3(), tmpV2=new THREE.Vector3();
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+let selRing=null;
+
+/* ── Init ── */
+function init(){
+  clock=new THREE.Clock();
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0xF5EDE4);
+  scene.fog=new THREE.Fog(0xF5EDE4,80,200);
+
+  camera=new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,0.5,300);
+  camera.position.set(45,40,45);
+
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.2;
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;
+  controls.dampingFactor=0.08;
+  controls.maxPolarAngle=Math.PI/2.2;
+  controls.minDistance=15;
+  controls.maxDistance=120;
+  controls.target.set(0,0,0);
+
+  setupLights();
+  buildGround();
+  buildStreets();
+  buildKitchens();
+  buildApartments();
+  buildOffices();
+  buildShops();
+  buildTemple();
+  buildPark();
+  buildMetroStation();
+  buildTrafficLights();
+  buildStreetLights();
+  spawnRiders();
+  spawnVehicles();
+  createSelRing();
+  populateTables();
+
+  renderer.domElement.addEventListener('click',onCanvasClick);
+  renderer.domElement.addEventListener('touchend',onCanvasClick);
+  window.addEventListener('resize',onResize);
+  setupBottomSheet();
+
+  document.getElementById('loading').style.display='none';
+  animate();
+}
+
+/* ── Lights ── */
+function setupLights(){
+  const amb=new THREE.AmbientLight(0xFFF5E6,0.6);
+  scene.add(amb);
+  const sun=new THREE.DirectionalLight(0xFFF8F0,1.0);
+  sun.position.set(30,50,20);
+  sun.castShadow=true;
+  sun.shadow.mapSize.set(1024,1024);
+  sun.shadow.camera.left=-60;sun.shadow.camera.right=60;
+  sun.shadow.camera.top=60;sun.shadow.camera.bottom=-60;
+  sun.shadow.camera.near=1;sun.shadow.camera.far=120;
+  scene.add(sun);
+  scene.userData.sun=sun;
+  scene.userData.amb=amb;
+  const hemi=new THREE.HemisphereLight(0xFFF5E6,0xE8D8C8,0.3);
+  scene.add(hemi);
+}
+
+/* ── Ground ── */
+function buildGround(){
+  const g=new THREE.PlaneGeometry(160,160);
+  const m=new THREE.MeshStandardMaterial({color:0xF0E6D8,roughness:0.9});
+  const mesh=new THREE.Mesh(g,m);
+  mesh.rotation.x=-Math.PI/2;
+  mesh.receiveShadow=true;
+  scene.add(mesh);
+}
+
+/* ── Streets ── */
+function buildStreets(){
+  const roadMat=new THREE.MeshStandardMaterial({color:0xC8BEB2,roughness:0.8});
+  const zebraMat=new THREE.MeshStandardMaterial({color:0xFFFFFF,roughness:0.6});
+  STREETS_X.forEach(x=>{
+    const road=new THREE.Mesh(new THREE.BoxGeometry(4,0.05,160),roadMat);
+    road.position.set(x,0.03,0);road.receiveShadow=true;scene.add(road);
+    // Centre line
+    for(let z=-75;z<76;z+=4){
+      const dash=new THREE.Mesh(new THREE.BoxGeometry(0.15,0.06,1.5),zebraMat);
+      dash.position.set(x,0.06,z);scene.add(dash);
+    }
+  });
+  STREETS_Z.forEach(z=>{
+    const road=new THREE.Mesh(new THREE.BoxGeometry(160,0.05,4),roadMat);
+    road.position.set(0,0.03,z);road.receiveShadow=true;scene.add(road);
+    for(let x=-75;x<76;x+=4){
+      const dash=new THREE.Mesh(new THREE.BoxGeometry(1.5,0.06,0.15),zebraMat);
+      dash.position.set(x,0.06,z);scene.add(dash);
+    }
+  });
+  // Zebra crossings at intersections
+  STREETS_X.forEach(x=>{
+    STREETS_Z.forEach(z=>{
+      for(let i=-1.5;i<=1.5;i+=0.6){
+        const stripe=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.07,3),zebraMat);
+        stripe.position.set(x+i,0.07,z+3.5);scene.add(stripe);
+        const stripe2=new THREE.Mesh(new THREE.BoxGeometry(3,0.07,0.4),zebraMat);
+        stripe2.position.set(x+3.5,0.07,z+i);scene.add(stripe2);
+      }
+    });
+  });
+}
+
+/* ── Shared geometry ── */
+const boxGeo=new THREE.BoxGeometry(1,1,1);
+const cylGeo=new THREE.CylinderGeometry(0.5,0.5,1,8);
+const sphGeo=new THREE.SphereGeometry(0.5,8,6);
+
+function makeBox(w,h,d,color,x,y,z){
+  const m=new THREE.Mesh(boxGeo,new THREE.MeshStandardMaterial({color,roughness:0.7}));
+  m.scale.set(w,h,d);m.position.set(x,y+h/2,z);m.castShadow=true;m.receiveShadow=true;
+  scene.add(m);return m;
+}
+
+/* ── Kitchens ── */
+function buildKitchens(){
+  const positions=[{x:-20,z:-20},{x:0,z:20},{x:20,z:-10}];
+  positions.forEach((p,i)=>{
+    const base=makeBox(8,3,6,0xFFFFFF,p.x,0,p.z);
+    base.userData={type:'kitchen',name:KITCHEN_NAMES[i],index:i};
+    // Roof
+    const roof=makeBox(8.4,0.3,6.4,0xE8452C,p.x,3,p.z);
+    // Exhaust fans
+    for(let f=-2;f<=2;f+=2){
+      const fan=new THREE.Mesh(cylGeo,new THREE.MeshStandardMaterial({color:0xA0A0A0,roughness:0.4,metalness:0.6}));
+      fan.scale.set(0.6,0.8,0.6);fan.position.set(p.x+f,3.7,p.z);
+      fan.castShadow=true;scene.add(fan);
+      fan.userData.isFan=true;
+    }
+    // Sign
+    const sign=makeBox(3,0.8,0.1,0xE8452C,p.x,3.8,p.z-3);
+    // Rider bay (small area beside kitchen)
+    makeBox(3,0.05,4,0xDDD5C8,p.x+5.5,0,p.z);
+    // Awning
+    makeBox(3.2,0.1,1.5,0xE8452C,p.x,2.6,p.z-3.5);
+
+    kitchens.push({mesh:base,pos:p,name:KITCHEN_NAMES[i],queue:Math.floor(Math.random()*8)+2,avgPrep:Math.floor(Math.random()*8)+12,status:'active'});
+  });
+}
+
+/* ── Apartments ── */
+function buildApartments(){
+  const colors=[0xF5E6D6,0xE8DDD0,0xFFF0E0,0xF0E0D0,0xE5D8C8];
+  const spots=[
+    {x:-20,z:5},{x:-20,z:15},{x:-8,z:-20},{x:8,z:-20},
+    {x:20,z:5},{x:20,z:15},{x:-8,z:30},{x:8,z:30},
+    {x:-35,z:-5},{x:35,z:-5},{x:-35,z:25},{x:35,z:25}
+  ];
+  spots.forEach((p,i)=>{
+    const h=Math.floor(Math.random()*5)+4;
+    const b=makeBox(5,h,5,colors[i%colors.length],p.x,0,p.z);
+    b.userData={type:'building',name:`Block ${String.fromCharCode(65+i)}`,floors:h};
+    buildings.push({mesh:b,pos:p,name:`Block ${String.fromCharCode(65+i)}`});
+    // Windows
+    const winMat=new THREE.MeshStandardMaterial({color:0xB8D8F0,roughness:0.3,metalness:0.2});
+    for(let floor=1;floor<h;floor+=1.5){
+      for(let wx=-1.5;wx<=1.5;wx+=1.5){
+        const win=new THREE.Mesh(boxGeo,winMat);
+        win.scale.set(0.6,0.5,0.05);win.position.set(p.x+wx,floor+0.5,p.z-2.52);
+        scene.add(win);
+      }
+    }
+    // Water tank on some
+    if(i%3===0){
+      const tank=new THREE.Mesh(cylGeo,new THREE.MeshStandardMaterial({color:0x333333,roughness:0.6}));
+      tank.scale.set(0.8,1,0.8);tank.position.set(p.x+1.5,h+0.5,p.z+1.5);scene.add(tank);
+    }
+  });
+}
+
+/* ── Offices / Tech Park ── */
+function buildOffices(){
+  // Tech park
+  const tp=makeBox(10,6,8,0xE8E4E0,25,0,25);
+  tp.userData={type:'building',name:'Tech Park'};
+  buildings.push({mesh:tp,pos:{x:25,z:25},name:'Tech Park'});
+  // Glass facade
+  const glassMat=new THREE.MeshStandardMaterial({color:0xA8D0E8,roughness:0.1,metalness:0.4,transparent:true,opacity:0.6});
+  const glass=new THREE.Mesh(boxGeo,glassMat);
+  glass.scale.set(10.1,5.5,0.05);glass.position.set(25,3,21);scene.add(glass);
+  // Office block
+  const off=makeBox(7,5,6,0xF0EBE5,25,0,-25);
+  off.userData={type:'building',name:'Office Tower'};
+  buildings.push({mesh:off,pos:{x:25,z:-25},name:'Office Tower'});
+}
+
+/* ── Shops ── */
+function buildShops(){
+  const shopColors=[0xE8452C,0x3B82F6,0x2EAF65,0xE8A832,0x9B59B6];
+  const shopPos=[{x:-30,z:-20},{x:-30,z:0},{x:-30,z:20},{x:30,z:-20},{x:30,z:0}];
+  shopPos.forEach((p,i)=>{
+    const shop=makeBox(3,2.5,3,0xFFF5EE,p.x+(p.x<0?-5:5),0,p.z);
+    // Awning
+    makeBox(3.4,0.1,1.2,shopColors[i],p.x+(p.x<0?-5:5),2.2,p.z-(p.x<0?1.8:-1.8));
+  });
+}
+
+/* ── Temple ── */
+function buildTemple(){
+  const base=makeBox(5,3,5,0xF5E0C0,-25,0,25);
+  // Gopuram (tower) – stacked decreasing boxes
+  const towerColors=[0xE8452C,0xF0A030,0xE8452C,0xF0D060];
+  for(let i=0;i<4;i++){
+    const s=2.5-i*0.5;
+    makeBox(s,1.2,s,towerColors[i],-25,3+i*1.2,25);
+  }
+  // Top finial
+  const finial=new THREE.Mesh(sphGeo,new THREE.MeshStandardMaterial({color:0xFFD700,roughness:0.3,metalness:0.7}));
+  finial.scale.set(0.4,0.6,0.4);finial.position.set(-25,8,25);scene.add(finial);
+}
+
+/* ── Park ── */
+function buildPark(){
+  // Grass area
+  const grass=new THREE.Mesh(new THREE.PlaneGeometry(12,12),new THREE.MeshStandardMaterial({color:0x8BC34A,roughness:0.8}));
+  grass.rotation.x=-Math.PI/2;grass.position.set(0,0.04,0);grass.receiveShadow=true;scene.add(grass);
+  // Trees
+  const trunkMat=new THREE.MeshStandardMaterial({color:0x8B6914,roughness:0.8});
+  const leafMat=new THREE.MeshStandardMaterial({color:0x4CAF50,roughness:0.7});
+  const treePos=[{x:-3,z:-3},{x:3,z:-3},{x:-3,z:3},{x:3,z:3},{x:0,z:0}];
+  treePos.forEach(p=>{
+    const trunk=new THREE.Mesh(cylGeo,trunkMat);
+    trunk.scale.set(0.25,2,0.25);trunk.position.set(p.x,1,p.z);trunk.castShadow=true;scene.add(trunk);
+    const crown=new THREE.Mesh(new THREE.ConeGeometry(1.2,2.5,6),leafMat);
+    crown.position.set(p.x,3,p.z);crown.castShadow=true;scene.add(crown);
+  });
+  // Bench
+  makeBox(2,0.4,0.6,0x8B6914,1.5,0,1.5);
+  // Fountain
+  const fountain=new THREE.Mesh(cylGeo,new THREE.MeshStandardMaterial({color:0xC8C0B0,roughness:0.5}));
+  fountain.scale.set(1.2,0.5,1.2);fountain.position.set(0,0.25,0);scene.add(fountain);
+}
+
+/* ── Metro Station ── */
+function buildMetroStation(){
+  // Platform
+  const platform=makeBox(14,1,4,0xD0C8B8,-25,0,-25);
+  platform.userData={type:'building',name:'Metro Station'};
+  buildings.push({mesh:platform,pos:{x:-25,z:-25},name:'Metro Station'});
+  // Roof
+  makeBox(14,0.2,5,0x607080,-25,3.5,-25);
+  // Pillars
+  for(let px=-6;px<=6;px+=4){
+    const pillar=new THREE.Mesh(cylGeo,new THREE.MeshStandardMaterial({color:0x808890,roughness:0.5}));
+    pillar.scale.set(0.2,3,0.2);pillar.position.set(-25+px,2,-25);scene.add(pillar);
+  }
+  // Train
+  const trainBody=makeBox(10,2,2.5,0x3060A0,-25,1,-25);
+  const stripe=makeBox(10,0.3,2.52,0xE8452C,-25,1.8,-25);
+  // Windows
+  for(let wx=-4;wx<=4;wx+=1.5){
+    const w=new THREE.Mesh(boxGeo,new THREE.MeshStandardMaterial({color:0xA8D4F0,roughness:0.2}));
+    w.scale.set(0.8,0.6,0.05);w.position.set(-25+wx,1.8,-23.74);scene.add(w);
+  }
+}
+
+/* ── Traffic Lights ── */
+function buildTrafficLights(){
+  const intersections=[];
+  STREETS_X.forEach(x=>{STREETS_Z.forEach(z=>{intersections.push({x:x+3,z:z+3})})});
+  intersections.forEach((p,i)=>{
+    const pole=new THREE.Mesh(cylGeo,new THREE.MeshStandardMaterial({color:0x505050}));
+    pole.scale.set(0.1,3,0.1);pole.position.set(p.x,1.5,p.z);scene.add(pole);
+    const housing=makeBox(0.4,1,0.4,0x303030,p.x,3,p.z);
+    const redL=new THREE.Mesh(sphGeo,new THREE.MeshStandardMaterial({color:0xFF0000,emissive:0xFF0000,emissiveIntensity:0.3}));
+    redL.scale.set(0.2,0.2,0.2);redL.position.set(p.x,3.7,p.z-0.22);scene.add(redL);
+    const greenL=new THREE.Mesh(sphGeo,new THREE.MeshStandardMaterial({color:0x00FF00,emissive:0x00FF00,emissiveIntensity:0.1}));
+    greenL.scale.set(0.2,0.2,0.2);greenL.position.set(p.x,3.2,p.z-0.22);scene.add(greenL);
+    trafficLights.push({red:redL,green:greenL,phase:i%2,timer:0});
+  });
+}
+
+/* ── Street Lights ── */
+function buildStreetLights(){
+  STREETS_X.forEach(x=>{
+    for(let z=-35;z<=35;z+=15){
+      const pole=new THREE.Mesh(cylGeo,new THREE.MeshStandardMaterial({color:0x606060}));
+      pole.scale.set(0.08,4,0.08);pole.position.set(x+2.5,2,z);scene.add(pole);
+      const lamp=new THREE.Mesh(sphGeo,new THREE.MeshStandardMaterial({color:0xFFE4B0,emissive:0xFFE4B0,emissiveIntensity:0}));
+      lamp.scale.set(0.25,0.15,0.25);lamp.position.set(x+2.5,4.1,z);scene.add(lamp);
+      const light=new THREE.PointLight(0xFFE0A0,0,15);
+      light.position.set(x+2.5,4,z);scene.add(light);
+      streetLights.push({lamp,light});
+    }
+  });
+}
+
+/* ── Riders ── */
+function spawnRiders(){
+  const bodyMat=new THREE.MeshStandardMaterial({color:0xE8452C,roughness:0.6});
+  const helmetMat=new THREE.MeshStandardMaterial({color:0x303030,roughness:0.4});
+  for(let i=0;i<RIDER_NAMES.length;i++){
+    const group=new THREE.Group();
+    // Scooter body
+    const scooter=new THREE.Mesh(boxGeo,new THREE.MeshStandardMaterial({color:0x404040,roughness:0.5}));
+    scooter.scale.set(0.5,0.4,1);scooter.position.y=0.3;group.add(scooter);
+    // Wheels
+    const wheelMat=new THREE.MeshStandardMaterial({color:0x222222});
+    [0.4,-0.4].forEach(wz=>{
+      const wheel=new THREE.Mesh(cylGeo,wheelMat);
+      wheel.scale.set(0.25,0.06,0.25);wheel.rotation.z=Math.PI/2;
+      wheel.position.set(0,0.15,wz);group.add(wheel);
+    });
+    // Rider body
+    const body=new THREE.Mesh(boxGeo,bodyMat);
+    body.scale.set(0.35,0.5,0.3);body.position.set(0,0.75,0);group.add(body);
+    // Helmet
+    const helmet=new THREE.Mesh(sphGeo,helmetMat);
+    helmet.scale.set(0.3,0.3,0.3);helmet.position.set(0,1.15,0);group.add(helmet);
+    // Delivery box
+    const box=new THREE.Mesh(boxGeo,new THREE.MeshStandardMaterial({color:0xE8452C,roughness:0.5}));
+    box.scale.set(0.4,0.35,0.35);box.position.set(0,0.85,-0.3);group.add(box);
+
+    // Random position on street
+    const streetX=STREETS_X[Math.floor(Math.random()*STREETS_X.length)];
+    const rz=(Math.random()-0.5)*60;
+    group.position.set(streetX,0,rz);
+    group.castShadow=true;
+    group.userData={type:'rider',name:RIDER_NAMES[i],index:i};
+    scene.add(group);
+
+    const statuses=['idle','delivering','delivering','delivering','returning'];
+    riders.push({
+      group,name:RIDER_NAMES[i],
+      status:statuses[Math.floor(Math.random()*statuses.length)],
+      target:null,targetPos:null,
+      ordersToday:Math.floor(Math.random()*12)+3,
+      distKm:+(Math.random()*15+2).toFixed(1),
+      trail:[],speed:0.08+Math.random()*0.04,
+      waypoints:[],waypointIdx:0
+    });
+  }
+}
+
+/* ── Vehicles (cars, auto-rickshaws) ── */
+function spawnVehicles(){
+  const carColors=[0x3B82F6,0x2EAF65,0xE8A832,0x9B59B6,0xE8452C,0x607890];
+  for(let i=0;i<10;i++){
+    const group=new THREE.Group();
+    const isAuto=i<3;
+    if(isAuto){
+      // Auto-rickshaw: small, rounded
+      const body=new THREE.Mesh(boxGeo,new THREE.MeshStandardMaterial({color:0x4CAF50,roughness:0.5}));
+      body.scale.set(0.6,0.7,1);body.position.y=0.4;group.add(body);
+      const roof=new THREE.Mesh(boxGeo,new THREE.MeshStandardMaterial({color:0xF5F0A0,roughness:0.6}));
+      roof.scale.set(0.55,0.08,0.8);roof.position.set(0,0.8,0);group.add(roof);
+    } else {
+      const body=new THREE.Mesh(boxGeo,new THREE.MeshStandardMaterial({color:carColors[i%carColors.length],roughness:0.4}));
+      body.scale.set(0.7,0.5,1.4);body.position.y=0.35;group.add(body);
+      const cabin=new THREE.Mesh(boxGeo,new THREE.MeshStandardMaterial({color:0xA8D0E8,roughness:0.2,transparent:true,opacity:0.6}));
+      cabin.scale.set(0.6,0.35,0.7);cabin.position.set(0,0.7,0);group.add(cabin);
+    }
+    // Wheels
+    const wheelMat=new THREE.MeshStandardMaterial({color:0x222222});
+    [[-0.35,0.15,0.4],[-0.35,0.15,-0.4],[0.35,0.15,0.4],[0.35,0.15,-0.4]].forEach(wp=>{
+      const w=new THREE.Mesh(cylGeo,wheelMat);
+      w.scale.set(0.15,0.04,0.15);w.rotation.z=Math.PI/2;
+      w.position.set(wp[0],wp[1],wp[2]);group.add(w);
+    });
+    const streetIdx=Math.floor(Math.random()*STREETS_Z.length);
+    const sx=(Math.random()-0.5)*60;
+    group.position.set(sx,0,STREETS_Z[streetIdx]);
+    group.castShadow=true;
+    scene.add(group);
+    vehicles.push({
+      group,
+      dir:Math.random()>0.5?1:-1,
+      speed:0.03+Math.random()*0.02,
+      streetZ:STREETS_Z[streetIdx],
+      stopped:false,stopTimer:0
+    });
+  }
+}
+
+/* ── Selection Ring ── */
+function createSelRing(){
+  const ringGeo=new THREE.RingGeometry(1.8,2,32);
+  const ringMat=new THREE.MeshBasicMaterial({color:0xE8452C,side:THREE.DoubleSide,transparent:true,opacity:0.5});
+  selRing=new THREE.Mesh(ringGeo,ringMat);
+  selRing.rotation.x=-Math.PI/2;
+  selRing.visible=false;
+  scene.add(selRing);
+}
+
+/* ── Orders simulation ── */
+function createOrder(){
+  orderCounter++;
+  const kitchen=kitchens[Math.floor(Math.random()*kitchens.length)];
+  const building=buildings[Math.floor(Math.random()*buildings.length)];
+  const dish=DISHES[Math.floor(Math.random()*DISHES.length)];
+  const total=Math.floor(Math.random()*300)+80;
+  const order={
+    id:'D-'+orderCounter,dish,total,
+    kitchen:kitchen.name,
+    destination:building.name,
+    destPos:{x:building.pos.x,z:building.pos.z},
+    kitchenPos:{x:kitchen.pos.x,z:kitchen.pos.z},
+    status:'placed',rider:null,
+    timer:0,cookTime:3+Math.random()*5
+  };
+  orders.push(order);
+  if(orders.length>30) orders.shift();
+  // Drop pin effect — mark building
+  const pin=new THREE.Mesh(sphGeo,new THREE.MeshStandardMaterial({color:0xE8452C,emissive:0xE8452C,emissiveIntensity:0.3}));
+  pin.scale.set(0.4,0.4,0.4);
+  pin.position.set(building.pos.x,10,building.pos.z);
+  scene.add(pin);
+  setTimeout(()=>scene.remove(pin),3000);
+
+  ordersThisHour++;
+  return order;
+}
+
+/* ── Assign rider to order ── */
+function assignRider(order){
+  const idle=riders.filter(r=>r.status==='idle');
+  if(idle.length===0) return false;
+  const rider=idle[Math.floor(Math.random()*idle.length)];
+  rider.status='picking';
+  rider.target=order;
+  order.rider=rider.name;
+  order.status='accepted';
+  // Build waypoints: current → kitchen → destination
+  rider.waypoints=[
+    {x:order.kitchenPos.x,z:order.kitchenPos.z,action:'pickup'},
+    {x:order.destPos.x,z:order.destPos.z,action:'deliver'}
+  ];
+  rider.waypointIdx=0;
+  return true;
+}
+
+/* ── Update simulation ── */
+let orderSpawnTimer=0;
+let trackerOrder=null;
+function updateSimulation(dt){
+  // Spawn orders
+  orderSpawnTimer+=dt;
+  if(orderSpawnTimer>4){
+    orderSpawnTimer=0;
+    const o=createOrder();
+    if(!trackerOrder || trackerOrder.status==='delivered'){
+      trackerOrder=o;
+    }
+    // Auto-assign after "cook"
+    setTimeout(()=>{
+      if(o.status==='placed'){o.status='cooking';}
+      setTimeout(()=>{
+        if(o.status==='cooking'){assignRider(o);}
+      },o.cookTime*1000);
+    },1000);
+  }
+
+  // Update riders
+  riders.forEach(r=>{
+    if(r.waypoints.length>0 && r.waypointIdx<r.waypoints.length){
+      const wp=r.waypoints[r.waypointIdx];
+      tmpV.set(wp.x,0,wp.z);
+      const dist=r.group.position.distanceTo(tmpV);
+      if(dist>0.5){
+        tmpV2.copy(tmpV).sub(r.group.position).normalize();
+        r.group.position.x+=tmpV2.x*r.speed;
+        r.group.position.z+=tmpV2.z*r.speed;
+        r.group.lookAt(tmpV.x,0,tmpV.z);
+      } else {
+        if(wp.action==='pickup'){
+          r.status='delivering';
+          if(r.target) r.target.status='picked';
+          r.waypointIdx++;
+        } else if(wp.action==='deliver'){
+          r.status='idle';
+          if(r.target){r.target.status='delivered';r.ordersToday++;}
+          r.target=null;
+          r.waypoints=[];r.waypointIdx=0;
+          // Small delivered burst
+          const burst=new THREE.Mesh(sphGeo,new THREE.MeshStandardMaterial({color:0x2EAF65,emissive:0x2EAF65,emissiveIntensity:0.5,transparent:true,opacity:0.6}));
+          burst.scale.set(0.3,0.3,0.3);burst.position.copy(r.group.position);burst.position.y=1;
+          scene.add(burst);
+          setTimeout(()=>scene.remove(burst),1500);
+        }
+      }
+    } else if(r.status==='idle'){
+      // Idle drift on street
+      r.group.position.x+=Math.sin(clock.elapsedTime*0.5+r.group.id)*0.01;
+    }
+  });
+
+  // Update vehicles
+  vehicles.forEach(v=>{
+    if(v.stopped){
+      v.stopTimer-=dt;
+      if(v.stopTimer<=0) v.stopped=false;
+      return;
+    }
+    v.group.position.x+=v.dir*v.speed;
+    if(v.group.position.x>55){v.dir=-1;v.group.rotation.y=Math.PI;}
+    if(v.group.position.x<-55){v.dir=1;v.group.rotation.y=0;}
+    // Check traffic lights
+    trafficLights.forEach(tl=>{
+      const dx=Math.abs(v.group.position.x-tl.red.position.x);
+      const dz=Math.abs(v.group.position.z-tl.red.position.z);
+      if(dx<4&&dz<6&&tl.phase===0){
+        v.stopped=true;v.stopTimer=2;
+      }
+    });
+  });
+
+  // Traffic light cycling
+  trafficLights.forEach(tl=>{
+    tl.timer+=dt;
+    if(tl.timer>6){tl.timer=0;tl.phase=1-tl.phase;}
+    tl.red.material.emissiveIntensity=tl.phase===0?0.5:0.05;
+    tl.green.material.emissiveIntensity=tl.phase===1?0.5:0.05;
+  });
+
+  // Update tracker
+  if(trackerOrder) updateTrackerUI(trackerOrder);
+}
+
+/* ── Day/Night ── */
+window.toggleDayNight=function(){
+  isNight=!isNight;
+  const sun=scene.userData.sun;
+  const amb=scene.userData.amb;
+  if(isNight){
+    scene.background.set(0x1A1520);
+    scene.fog.color.set(0x1A1520);
+    sun.intensity=0.15;amb.intensity=0.15;
+    streetLights.forEach(sl=>{sl.lamp.material.emissiveIntensity=0.8;sl.light.intensity=1.5;});
+    renderer.toneMappingExposure=0.6;
+  } else {
+    scene.background.set(0xF5EDE4);
+    scene.fog.color.set(0xF5EDE4);
+    sun.intensity=1.0;amb.intensity=0.6;
+    streetLights.forEach(sl=>{sl.lamp.material.emissiveIntensity=0;sl.light.intensity=0;});
+    renderer.toneMappingExposure=1.2;
+  }
+};
+
+/* ── Zone flying ── */
+const ZONES={
+  all:{x:0,y:40,z:45,tx:0,tz:0},
+  kitchen:{x:-20,y:20,z:-10,tx:-20,tz:-20},
+  residential:{x:-20,y:25,z:20,tx:-20,tz:15},
+  commercial:{x:25,y:25,z:35,tx:25,tz:25}
+};
+let flyAnim=null;
+window.flyToZone=function(zone){
+  const z=ZONES[zone]||ZONES.all;
+  // Update pills
+  document.querySelectorAll('#area-switcher button,.mob-area-pill').forEach(b=>{
+    b.classList.toggle('active',b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+zone+"'"));
+  });
+  flyAnim={from:camera.position.clone(),to:new THREE.Vector3(z.x,z.y,z.z),target:new THREE.Vector3(z.tx,0,z.tz),t:0,dur:1.5};
+};
+
+/* ── Click handler ── */
+function onCanvasClick(e){
+  e.preventDefault();
+  const rect=renderer.domElement.getBoundingClientRect();
+  let cx,cy;
+  if(e.changedTouches){cx=e.changedTouches[0].clientX;cy=e.changedTouches[0].clientY;}
+  else{cx=e.clientX;cy=e.clientY;}
+  mouse.x=((cx-rect.left)/rect.width)*2-1;
+  mouse.y=-((cy-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+
+  // Check riders first
+  const riderMeshes=riders.map(r=>r.group);
+  const rHits=raycaster.intersectObjects(riderMeshes,true);
+  if(rHits.length>0){
+    let obj=rHits[0].object;
+    while(obj.parent&&!obj.userData.type) obj=obj.parent;
+    if(obj.userData.type==='rider'){
+      selectObject(obj);
+      return;
+    }
+  }
+  // Check buildings & kitchens
+  const bMeshes=[...kitchens.map(k=>k.mesh),...buildings.map(b=>b.mesh)];
+  const bHits=raycaster.intersectObjects(bMeshes);
+  if(bHits.length>0){
+    selectObject(bHits[0].object);
+    return;
+  }
+  clearSelection();
+}
+
+function selectObject(obj){
+  selectedObj=obj;
+  selRing.visible=true;
+  selRing.position.set(obj.position.x,0.1,obj.position.z);
+  followRider=null;
+
+  const ud=obj.userData;
+  const panel=document.getElementById('sel-panel');
+  const title=document.getElementById('sel-title');
+  const body=document.getElementById('sel-body');
+  panel.classList.add('show');
+
+  if(ud.type==='rider'){
+    const r=riders[ud.index];
+    title.textContent='🛵 '+r.name;
+    followRider=r;
+    body.innerHTML=`
+      <div class="stat-row"><span class="stat-label">Status</span><span class="stat-val"><span class="badge ${r.status}">${r.status}</span></span></div>
+      <div class="stat-row"><span class="stat-label">Orders Today</span><span class="stat-val">${r.ordersToday}</span></div>
+      <div class="stat-row"><span class="stat-label">Distance</span><span class="stat-val">${r.distKm} km</span></div>
+      ${r.target?'<div class="stat-row"><span class="stat-label">Current Order</span><span class="stat-val">'+r.target.id+'</span></div>':''}
+    `;
+  } else if(ud.type==='kitchen'){
+    const k=kitchens[ud.index];
+    title.textContent='🍳 '+k.name;
+    body.innerHTML=`
+      <div class="stat-row"><span class="stat-label">Queue</span><span class="stat-val">${k.queue} orders</span></div>
+      <div class="stat-row"><span class="stat-label">Avg Prep</span><span class="stat-val">${k.avgPrep} min</span></div>
+      <div class="stat-row"><span class="stat-label">Status</span><span class="stat-val"><span class="badge online">${k.status}</span></span></div>
+    `;
+  } else if(ud.type==='building'){
+    title.textContent='🏢 '+ud.name;
+    body.innerHTML=`
+      <div class="stat-row"><span class="stat-label">Type</span><span class="stat-val">${ud.name.includes('Tech')||ud.name.includes('Office')?'Commercial':'Residential'}</span></div>
+      <div class="stat-row"><span class="stat-label">Recent Orders</span><span class="stat-val">${Math.floor(Math.random()*5)+1}</span></div>
+    `;
+  }
+  // Fly camera to object
+  const tp=obj.position;
+  flyAnim={from:camera.position.clone(),to:new THREE.Vector3(tp.x+15,15,tp.z+15),target:new THREE.Vector3(tp.x,2,tp.z),t:0,dur:1.2};
+}
+
+window.clearSelection=function(){
+  selectedObj=null;followRider=null;
+  selRing.visible=false;
+  document.getElementById('sel-panel').classList.remove('show');
+};
+
+/* ── Tables ── */
+function populateTables(){
+  updateOrdersTable();
+  updateRidersTable();
+  updateKitchensTable();
+}
+
+function updateOrdersTable(){
+  const displayOrders=orders.slice(-8).reverse();
+  const html=displayOrders.map(o=>`<tr><td>${o.id}</td><td>${o.dish}</td><td>₹${o.total}</td><td><span class="badge ${o.status==='cooking'?'cooking':o.status==='delivering'||o.status==='picked'?'delivering':o.status==='delivered'?'online':'busy'}">${o.status}</span></td></tr>`).join('');
+  const el=document.getElementById('orders-tbody');
+  if(el) el.innerHTML=html;
+}
+
+function updateRidersTable(){
+  const html=riders.slice(0,8).map(r=>`<tr><td>${r.name}</td><td>${r.ordersToday}</td><td>${r.distKm}km</td><td><span class="badge ${r.status==='idle'?'online':r.status==='delivering'?'delivering':'busy'}">${r.status}</span></td></tr>`).join('');
+  const el=document.getElementById('riders-tbody');
+  if(el) el.innerHTML=html;
+}
+
+function updateKitchensTable(){
+  const html=kitchens.map(k=>`<tr><td>${k.name}</td><td>${k.queue}</td><td>${k.avgPrep}m</td><td><span class="badge online">${k.status}</span></td></tr>`).join('');
+  const el=document.getElementById('kitchens-tbody');
+  if(el) el.innerHTML=html;
+}
+
+/* ── Desktop tabs ── */
+window.showDeskTab=function(tab){
+  document.querySelectorAll('#desk-tab-bar button').forEach(b=>{
+    b.classList.toggle('active',b.getAttribute('onclick').includes("'"+tab+"'"));
+  });
+  document.getElementById('orders-table').style.display=tab==='orders'?'':'none';
+  document.getElementById('riders-table').style.display=tab==='riders'?'':'none';
+  document.getElementById('kitchens-table').style.display=tab==='kitchens'?'':'none';
+};
+
+/* ── Tracker UI ── */
+function updateTrackerUI(order){
+  const steps=document.querySelectorAll('#tracker-steps .tracker-step');
+  const stageMap={placed:0,accepted:1,cooking:2,picked:3,delivering:4,delivered:5};
+  const stage=stageMap[order.status]||0;
+  steps.forEach((s,i)=>{
+    s.classList.remove('active','done');
+    if(i<stage) s.classList.add('done');
+    else if(i===stage) s.classList.add('active');
+  });
+  const titleEl=document.querySelector('#order-tracker .tracker-card h3');
+  if(titleEl) titleEl.textContent='🛵 Order #'+order.id;
+}
+
+/* ── Mobile sheet ── */
+function setupBottomSheet(){
+  const sheet=document.getElementById('bottom-sheet');
+  const handle=document.getElementById('sheet-handle');
+  if(!handle) return;
+  let startY=0,startTransform=0,isOpen=false;
+  handle.addEventListener('touchstart',e=>{startY=e.touches[0].clientY;startTransform=isOpen?0:sheet.offsetHeight-48;});
+  handle.addEventListener('touchmove',e=>{
+    const dy=e.touches[0].clientY-startY;
+    const newT=Math.max(0,Math.min(sheet.offsetHeight-48,startTransform+dy));
+    sheet.style.transform=`translateY(${newT}px)`;
+  });
+  handle.addEventListener('touchend',e=>{
+    const dy=e.changedTouches[0].clientY-startY;
+    isOpen=dy<-30?true:dy>30?false:isOpen;
+    sheet.classList.toggle('open',isOpen);
+    sheet.style.transform='';
+  });
+  handle.addEventListener('click',()=>{isOpen=!isOpen;sheet.classList.toggle('open',isOpen);});
+  showSheetTab('tracker');
+}
+
+window.showSheetTab=function(tab){
+  document.querySelectorAll('#sheet-tabs button').forEach(b=>{
+    b.classList.toggle('active',b.getAttribute('onclick').includes("'"+tab+"'"));
+  });
+  const content=document.getElementById('sheet-content');
+  if(tab==='tracker'){
+    const stages=['Placed','Accepted','Cooking','Picked Up','On the Way','Delivered'];
+    const o=trackerOrder||{id:'D-1047',status:'placed'};
+    const stageMap={placed:0,accepted:1,cooking:2,picked:3,delivering:4,delivered:5};
+    const cur=stageMap[o.status]||0;
+    content.innerHTML='<h4 style="font-size:13px;font-weight:700;margin-bottom:8px">🛵 Order #'+o.id+'</h4>'+
+      stages.map((s,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><div style="width:10px;height:10px;border-radius:50%;background:${i<cur?'var(--success)':i===cur?'var(--accent)':'var(--border)'}"></div><span style="font-size:12px;color:${i===cur?'var(--accent)':'var(--text-secondary)'};font-weight:${i===cur?700:400}">${s}</span></div>`).join('');
+  } else if(tab==='orders'){
+    const displayOrders=orders.slice(-6).reverse();
+    content.innerHTML='<table class="data-table"><thead><tr><th>ID</th><th>Dish</th><th>₹</th><th>Status</th></tr></thead><tbody>'+
+      displayOrders.map(o=>`<tr><td>${o.id}</td><td>${o.dish}</td><td>₹${o.total}</td><td><span class="badge ${o.status==='delivered'?'online':'cooking'}">${o.status}</span></td></tr>`).join('')+'</tbody></table>';
+  } else if(tab==='riders'){
+    content.innerHTML='<table class="data-table"><thead><tr><th>Rider</th><th>#</th><th>Dist</th><th>Status</th></tr></thead><tbody>'+
+      riders.slice(0,8).map(r=>`<tr><td>${r.name}</td><td>${r.ordersToday}</td><td>${r.distKm}km</td><td><span class="badge ${r.status==='idle'?'online':'delivering'}">${r.status}</span></td></tr>`).join('')+'</tbody></table>';
+  } else if(tab==='kitchens'){
+    content.innerHTML='<table class="data-table"><thead><tr><th>Kitchen</th><th>Queue</th><th>Prep</th><th>Status</th></tr></thead><tbody>'+
+      kitchens.map(k=>`<tr><td>${k.name}</td><td>${k.queue}</td><td>${k.avgPrep}m</td><td><span class="badge online">${k.status}</span></td></tr>`).join('')+'</tbody></table>';
+  } else if(tab==='info'){
+    content.innerHTML=`
+      <div class="stat-row"><span class="stat-label">Season</span><span class="stat-val">${season}</span></div>
+      <div class="stat-row"><span class="stat-label">Time</span><span class="stat-val">${isNight?'Night':'Day'}</span></div>
+      <div class="stat-row"><span class="stat-label">Total Riders</span><span class="stat-val">${riders.length}</span></div>
+      <div class="stat-row"><span class="stat-label">Kitchens Active</span><span class="stat-val">${kitchens.filter(k=>k.status==='active').length}</span></div>
+      <div class="stat-row"><span class="stat-label">Orders Today</span><span class="stat-val">${ordersThisHour}</span></div>
+    `;
+  }
+};
+
+/* ── Mobile nav ── */
+window.mobNav=function(view){
+  document.querySelectorAll('#mob-nav button').forEach(b=>{
+    b.classList.toggle('active',b.getAttribute('onclick').includes("'"+view+"'"));
+  });
+  const views={
+    street:{x:0,y:35,z:40,tx:0,tz:0},
+    kitchen:{x:-20,y:18,z:-10,tx:-20,tz:-20},
+    riders:{x:10,y:20,z:10,tx:0,tz:0},
+    park:{x:0,y:15,z:12,tx:0,tz:0},
+    data:{x:0,y:50,z:50,tx:0,tz:0}
+  };
+  const v=views[view]||views.street;
+  flyAnim={from:camera.position.clone(),to:new THREE.Vector3(v.x,v.y,v.z),target:new THREE.Vector3(v.tx,0,v.tz),t:0,dur:1.2};
+  if(view==='data'){
+    const sheet=document.getElementById('bottom-sheet');
+    if(sheet){sheet.classList.add('open');}
+  }
+};
+
+/* ── Clock ── */
+function updateClock(){
+  const now=new Date();
+  const h=now.getHours().toString().padStart(2,'0');
+  const m=now.getMinutes().toString().padStart(2,'0');
+  const el=document.getElementById('clock');
+  if(el) el.textContent=h+':'+m;
+}
+
+/* ── KPI update ── */
+function updateKPIs(){
+  const el1=document.getElementById('kpi-orders');
+  const el2=document.getElementById('kpi-delivery');
+  const el3=document.getElementById('kpi-riders');
+  if(el1) el1.textContent=ordersThisHour;
+  const avgDel=Math.floor(20+Math.random()*8);
+  if(el2) el2.innerHTML=avgDel+'<span style="font-size:14px;font-weight:600">min</span>';
+  const online=riders.filter(r=>r.status!=='offline').length;
+  const idle=riders.filter(r=>r.status==='idle').length;
+  if(el3) el3.textContent=online;
+  const sub3=el3?.parentElement?.querySelector('.sub');
+  if(sub3) sub3.textContent=idle+' idle';
+}
+
+/* ── Resize ── */
+function onResize(){
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+}
+
+/* ── Animate ── */
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.1);
+
+  updateSimulation(dt);
+
+  // Fly animation
+  if(flyAnim){
+    flyAnim.t+=dt/flyAnim.dur;
+    if(flyAnim.t>=1){
+      camera.position.copy(flyAnim.to);
+      controls.target.copy(flyAnim.target);
+      flyAnim=null;
+    } else {
+      const t=flyAnim.t*flyAnim.t*(3-2*flyAnim.t); // smoothstep
+      camera.position.lerpVectors(flyAnim.from,flyAnim.to,t);
+      controls.target.lerp(flyAnim.target,t*0.1+0.02);
+    }
+  }
+
+  // Follow rider
+  if(followRider){
+    selRing.position.set(followRider.group.position.x,0.1,followRider.group.position.z);
+  }
+
+  // Rotate exhaust fans
+  scene.traverse(obj=>{
+    if(obj.userData.isFan) obj.rotation.y+=dt*3;
+  });
+
+  // Selection ring pulse
+  if(selRing.visible){
+    selRing.material.opacity=0.3+Math.sin(clock.elapsedTime*3)*0.2;
+    selRing.rotation.z+=dt*0.5;
+  }
+
+  controls.update();
+  renderer.render(scene,camera);
+
+  // Throttled DOM updates
+  domThrottle+=dt;
+  if(domThrottle>0.5){
+    domThrottle=0;
+    updateClock();
+    updateKPIs();
+    updateOrdersTable();
+    updateRidersTable();
+  }
+}
+
+/* ── Seasons (placeholder for weather badge updates) ── */
+window.setSeason=function(s){
+  season=s;
+  const badge=document.getElementById('weather-badge');
+  if(s==='summer'){badge.textContent='☀️ Summer';badge.style.background='rgba(232,168,50,0.12)';badge.style.color='var(--warning)';}
+  else if(s==='monsoon'){badge.textContent='🌧️ Monsoon';badge.style.background='rgba(59,130,246,0.12)';badge.style.color='var(--info)';}
+  else if(s==='festival'){badge.textContent='🪔 Festival';badge.style.background='rgba(232,69,44,0.12)';badge.style.color='var(--accent)';}
+};
+
+/* ── Boot ── */
+init();
+
+})();
+</script>
+</body>
+</html>
