@@ -137,11 +137,33 @@ canvas{display:block;touch-action:none}
 #loading .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
 #loading p{margin-top:16px;font-size:14px;color:var(--text-secondary);font-weight:500}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Rain Canvas ── */
+#rain-canvas{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity .5s}
+#rain-canvas.active{opacity:1}
+
+/* ── Weather Menu ── */
+#weather-menu{position:fixed;top:52px;right:120px;background:var(--surface);backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:0 4px 20px var(--shadow);z-index:110;display:none;min-width:140px}
+#weather-menu.show{display:block}
+#weather-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;border:none;background:transparent;border-radius:6px;font-size:13px;cursor:pointer;color:var(--text);text-align:left;transition:background .2s}
+#weather-menu button:hover{background:var(--bg)}
+#weather-menu button.active{background:rgba(232,69,44,0.08);color:var(--accent);font-weight:600}
+
+/* ── String Lights ── */
+@keyframes twinkle{0%,100%{opacity:0.6}50%{opacity:1}}
 </style>
 </head>
 <body>
 <div id="loading"><div class="spinner"></div><p>Building neighbourhood…</p></div>
 <div id="canvas-container"></div>
+<canvas id="rain-canvas"></canvas>
+
+<!-- Weather Menu -->
+<div id="weather-menu">
+  <button class="active" onclick="window.setSeason('summer')">☀️ Summer</button>
+  <button onclick="window.setSeason('monsoon')">🌧️ Monsoon</button>
+  <button onclick="window.setSeason('festival')">🪔 Festival Night</button>
+</div>
 
 <!-- Top Bar -->
 <div id="topbar">
@@ -154,7 +176,7 @@ canvas{display:block;touch-action:none}
     <button onclick="window.flyToZone('commercial')">Commercial</button>
   </div>
   <div class="top-right">
-    <span id="weather-badge">☀️ Summer</span>
+    <span id="weather-badge" onclick="window.toggleWeatherMenu()" style="cursor:pointer">☀️ Summer</span>
     <span id="clock">12:00</span>
     <button class="top-btn" id="alert-count" title="Alerts">🔔<span class="dot"></span></button>
     <button class="top-btn" onclick="window.toggleDayNight()" title="Day/Night">🌗</button>
@@ -236,6 +258,7 @@ canvas{display:block;touch-action:none}
   <button class="mob-area-pill" onclick="window.flyToZone('kitchen')">Kitchens</button>
   <button class="mob-area-pill" onclick="window.flyToZone('residential')">Homes</button>
   <button class="mob-area-pill" onclick="window.flyToZone('commercial')">Offices</button>
+  <button class="mob-area-pill" onclick="window.cycleSeason()" id="mob-season-pill">☀️</button>
 </div>
 
 <!-- Mobile: Bottom Sheet -->
@@ -280,6 +303,8 @@ let selectedObj=null, followRider=null;
 let isNight=false, season='summer';
 let orderCounter=1047, ordersThisHour=47, ridersOnline=18;
 let domThrottle=0;
+let puddles=[], stringLights=[], rainCtx=null, rainDrops=[];
+let riderRaincoatMats=[], riderNormalMats=[];
 const tmpV=new THREE.Vector3(), tmpV2=new THREE.Vector3();
 const raycaster=new THREE.Raycaster();
 const mouse=new THREE.Vector2();
@@ -1086,6 +1111,9 @@ function onResize(){
   camera.aspect=window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth,window.innerHeight);
+  // Resize rain canvas
+  const rc=document.getElementById('rain-canvas');
+  if(rc){rc.width=window.innerWidth;rc.height=window.innerHeight;}
 }
 
 /* ── Animate ── */
@@ -1128,6 +1156,20 @@ function animate(){
   controls.update();
   renderer.render(scene,camera);
 
+  // Season effects in render loop
+  if(season==='monsoon') drawRain();
+  if(season==='festival'){
+    stringLights.forEach(o=>{
+      if(o.userData&&o.userData.isBulb){
+        o.material.opacity=0.5+Math.sin(clock.elapsedTime*4+o.id*0.7)*0.4;
+      }
+    });
+  }
+  // Puddle shimmer
+  puddles.forEach(p=>{
+    p.material.opacity=0.3+Math.sin(clock.elapsedTime*2+p.id)*0.1;
+  });
+
   // Throttled DOM updates
   domThrottle+=dt;
   if(domThrottle>0.5){
@@ -1139,13 +1181,175 @@ function animate(){
   }
 }
 
-/* ── Seasons (placeholder for weather badge updates) ── */
+/* ── Rain System ── */
+function initRain(){
+  const rc=document.getElementById('rain-canvas');
+  rc.width=window.innerWidth;rc.height=window.innerHeight;
+  rainCtx=rc.getContext('2d');
+  rainDrops=[];
+  for(let i=0;i<200;i++){
+    rainDrops.push({x:Math.random()*rc.width,y:Math.random()*rc.height,len:8+Math.random()*15,speed:6+Math.random()*8,opacity:0.15+Math.random()*0.25});
+  }
+}
+function drawRain(){
+  if(!rainCtx||season!=='monsoon') return;
+  const rc=document.getElementById('rain-canvas');
+  rainCtx.clearRect(0,0,rc.width,rc.height);
+  rainCtx.strokeStyle='rgba(120,160,220,0.5)';
+  rainCtx.lineWidth=1.2;
+  rainDrops.forEach(d=>{
+    rainCtx.globalAlpha=d.opacity;
+    rainCtx.beginPath();
+    rainCtx.moveTo(d.x,d.y);
+    rainCtx.lineTo(d.x-2,d.y+d.len);
+    rainCtx.stroke();
+    d.y+=d.speed;
+    if(d.y>rc.height){d.y=-d.len;d.x=Math.random()*rc.width;}
+  });
+  rainCtx.globalAlpha=1;
+}
+
+/* ── Puddles ── */
+function createPuddles(){
+  removePuddles();
+  const puddleMat=new THREE.MeshStandardMaterial({color:0x6090C0,roughness:0.1,metalness:0.4,transparent:true,opacity:0.4});
+  const spots=[{x:-15,z:-5},{x:5,z:15},{x:15,z:-15},{x:-25,z:10},{x:25,z:0},{x:-5,z:-25},{x:10,z:25},{x:-20,z:-30}];
+  spots.forEach(p=>{
+    const puddle=new THREE.Mesh(new THREE.CircleGeometry(1+Math.random()*1.5,12),puddleMat);
+    puddle.rotation.x=-Math.PI/2;
+    puddle.position.set(p.x+Math.random()*4,0.08,p.z+Math.random()*4);
+    scene.add(puddle);
+    puddles.push(puddle);
+  });
+}
+function removePuddles(){
+  puddles.forEach(p=>scene.remove(p));
+  puddles=[];
+}
+
+/* ── String Lights (Festival) ── */
+function createStringLights(){
+  removeStringLights();
+  const mats=[
+    new THREE.MeshBasicMaterial({color:0xFFD700,transparent:true,opacity:0.8}),
+    new THREE.MeshBasicMaterial({color:0xFF4444,transparent:true,opacity:0.8}),
+    new THREE.MeshBasicMaterial({color:0x44FF44,transparent:true,opacity:0.8}),
+    new THREE.MeshBasicMaterial({color:0xFF8800,transparent:true,opacity:0.8})
+  ];
+  const wireMat=new THREE.MeshBasicMaterial({color:0x333333});
+  STREETS_X.forEach(x=>{
+    for(let z=-35;z<20;z+=15){
+      const wire=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.03,14),wireMat);
+      wire.position.set(x+2.5,3.8,z+7);scene.add(wire);stringLights.push(wire);
+      for(let bz=0;bz<14;bz+=1.8){
+        const bulb=new THREE.Mesh(sphGeo,mats[Math.floor(Math.random()*mats.length)].clone());
+        bulb.scale.set(0.15,0.15,0.15);bulb.position.set(x+2.5,3.65,z+bz);
+        bulb.userData.isBulb=true;scene.add(bulb);stringLights.push(bulb);
+        if(bz%5.4<1.8){
+          const bl=new THREE.PointLight(0xFFD700,0.3,6);
+          bl.position.copy(bulb.position);scene.add(bl);stringLights.push(bl);
+        }
+      }
+    }
+  });
+  STREETS_Z.forEach(z=>{
+    for(let x=-35;x<20;x+=15){
+      const wire=new THREE.Mesh(new THREE.BoxGeometry(14,0.03,0.03),wireMat);
+      wire.position.set(x+7,3.8,z);scene.add(wire);stringLights.push(wire);
+      for(let bx=0;bx<14;bx+=1.8){
+        const bulb=new THREE.Mesh(sphGeo,mats[Math.floor(Math.random()*mats.length)].clone());
+        bulb.scale.set(0.15,0.15,0.15);bulb.position.set(x+bx,3.65,z);
+        bulb.userData.isBulb=true;scene.add(bulb);stringLights.push(bulb);
+      }
+    }
+  });
+}
+function removeStringLights(){
+  stringLights.forEach(o=>scene.remove(o));
+  stringLights=[];
+}
+
+/* ── Rider Raincoat Toggle ── */
+function setRiderRaincoats(on){
+  riders.forEach(r=>{
+    r.group.children.forEach(child=>{
+      if(child.isMesh&&child.scale.y>0.45&&child.scale.y<0.55&&child.scale.x<0.4){
+        if(on){
+          if(!child.userData.origColor) child.userData.origColor=child.material.color.getHex();
+          child.material.color.setHex(0xFFD700);
+        } else {
+          if(child.userData.origColor) child.material.color.setHex(child.userData.origColor);
+        }
+      }
+    });
+  });
+}
+
+/* ── Seasons (full 3D effects) ── */
 window.setSeason=function(s){
+  const prev=season;
   season=s;
   const badge=document.getElementById('weather-badge');
-  if(s==='summer'){badge.textContent='☀️ Summer';badge.style.background='rgba(232,168,50,0.12)';badge.style.color='var(--warning)';}
-  else if(s==='monsoon'){badge.textContent='🌧️ Monsoon';badge.style.background='rgba(59,130,246,0.12)';badge.style.color='var(--info)';}
-  else if(s==='festival'){badge.textContent='🪔 Festival';badge.style.background='rgba(232,69,44,0.12)';badge.style.color='var(--accent)';}
+  const mobPill=document.getElementById('mob-season-pill');
+  const rc=document.getElementById('rain-canvas');
+  if(s==='summer'){
+    badge.textContent='☀️ Summer';badge.style.background='rgba(232,168,50,0.12)';badge.style.color='#E8A832';
+    if(mobPill) mobPill.textContent='☀️';
+  } else if(s==='monsoon'){
+    badge.textContent='🌧️ Monsoon';badge.style.background='rgba(59,130,246,0.12)';badge.style.color='#3B82F6';
+    if(mobPill) mobPill.textContent='🌧️';
+  } else if(s==='festival'){
+    badge.textContent='🪔 Festival';badge.style.background='rgba(232,69,44,0.12)';badge.style.color='#E8452C';
+    if(mobPill) mobPill.textContent='🪔';
+  }
+  const wm=document.getElementById('weather-menu');
+  if(wm){wm.classList.remove('show');
+    wm.querySelectorAll('button').forEach(function(b){b.classList.toggle('active',b.getAttribute('onclick').includes("'"+s+"'"));});
+  }
+  // Remove previous
+  if(prev==='monsoon'){
+    rc.classList.remove('active');
+    if(rainCtx) rainCtx.clearRect(0,0,rc.width,rc.height);
+    removePuddles();setRiderRaincoats(false);
+    scene.fog.near=80;scene.fog.far=200;
+  }
+  if(prev==='festival'){
+    removeStringLights();
+    if(!isNight){scene.userData.amb.intensity=0.6;scene.userData.amb.color.set(0xFFF5E6);
+      streetLights.forEach(function(sl){sl.lamp.material.emissiveIntensity=0;sl.light.intensity=0;sl.light.color.set(0xFFE0A0);});
+    }
+  }
+  // Apply new
+  if(s==='summer'){
+    if(!isNight){
+      scene.background.set(0xF5EDE4);scene.fog.color.set(0xF5EDE4);
+      scene.userData.sun.intensity=1.0;scene.userData.amb.intensity=0.6;
+      renderer.toneMappingExposure=1.2;
+    }
+  } else if(s==='monsoon'){
+    if(!rainCtx) initRain();
+    rc.classList.add('active');
+    createPuddles();setRiderRaincoats(true);
+    if(!isNight){
+      scene.background.set(0xD8DDE5);scene.fog.color.set(0xD8DDE5);
+      scene.userData.sun.intensity=0.5;scene.userData.amb.intensity=0.4;
+      scene.fog.near=40;scene.fog.far=120;
+      renderer.toneMappingExposure=0.9;
+    }
+  } else if(s==='festival'){
+    if(!isNight) window.toggleDayNight();
+    createStringLights();
+    scene.userData.amb.intensity=0.25;scene.userData.amb.color.set(0xFFE0A0);
+    streetLights.forEach(function(sl){sl.lamp.material.emissiveIntensity=1.0;sl.light.intensity=2.0;sl.light.color.set(0xFFD700);});
+  }
+};
+window.toggleWeatherMenu=function(){
+  document.getElementById('weather-menu').classList.toggle('show');
+};
+window.cycleSeason=function(){
+  const order=['summer','monsoon','festival'];
+  const idx=(order.indexOf(season)+1)%order.length;
+  window.setSeason(order[idx]);
 };
 
 /* ── Boot ── */
